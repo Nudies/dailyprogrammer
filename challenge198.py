@@ -1,4 +1,4 @@
-#challenge 199[easy]
+#challenge 198[easy]
 #http://www.reddit.com/r/dailyprogrammer/comments/2syz7y/20150119_challenge_198_easy_words_with_enemies/
 
 #challenge inputs
