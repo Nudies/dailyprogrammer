@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+from argparse import ArgumentParser
+from PIL import Image
+import random
+from bisect import bisect
+
+#CLI img to ASCII txt script. Output file will be whiteboard.txt
+#-h or --help for usage
+
+parser = ArgumentParser(description='Convert a .jpg to ASCII .txt')
+parser.add_argument('file', metavar='FILE', type=str, nargs=1,
+                    help='file to convert to ASCII')
+parser.add_argument('--size', type=int, nargs=2,
+                    help='set the dimensions (think text width!), \'150 55\'')
+args = parser.parse_args()
+
+greyscale = [
+            " ",
+            " ",
+            ".,-",
+            "_ivc=!/|\\~",
+            "gjez2]/(YL)t[+T7Vf",
+            "mdK4ZGbNDXY5P*Q",
+            "W8KMA",
+            "#%$"
+            ]
+
+zonebounds = [36, 72, 108, 144, 180, 216, 252]
+
+try:
+    im = Image.open(args.file[0])
+    try:
+        im = im.resize((args.size[0],args.size[1]), Image.BILINEAR)
+    except:
+        im = im.resize((150, 55), Image.BILINEAR)
+
+    im = im.convert("L")
+
+    str = ""
+    for y in range(0, im.size[1]):
+            for x in range(0, im.size[0]):
+                    lum = 255-im.getpixel((x,y))
+                    row = bisect(zonebounds, lum)
+                    possibles = greyscale[row]
+                    str += possibles[random.randint(0,len(possibles)-1)]
+            str = str + "\n"
+
+    canvas = open('whiteboard.txt', 'w')
+    canvas.write(str)
+    canvas.close()
+    print "ASCII version of %s is in whiteboard.txt!" % args.file[0]
+except:
+    print 'You need to provide a img file!'
