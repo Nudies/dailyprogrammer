@@ -24,10 +24,7 @@ input = """000000000
 
 def main(input):
     input = input.strip().split('\n')
-
     for s in input:
-
-
         outTop = ""
         outMid = ""
         outBot = ""
