@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+import argparse
+import sys
+
+
+def fw_tab(slices, reader, writer):
+    '''
+    Create a list for each row in rf and join it by tab
+    in wf.
+    '''
+    if not writer:
+        writer = 'fw_output.txt'
+    rf = open(reader, 'r')
+    wf = open(writer, 'w')
+    l = []
+    for line in rf:
+        for s in slices:
+            l.append(line[:int(s) + 1])
+            line = line[int(s):]
+        newS = '\t'.join(l)
+        wf.write(newS + '\n')
+        l = []
+    rf.close()
+    wf.close()
+    print 'Output file: %s' % reader
+
+
+def start_end(slices):
+    '''
+    Take a even number of start and end positions and create
+    column sections to use.
+    '''
+    odd = []
+    even = []
+    new_slices = []
+    if len(slices) % 2 != 0:
+        print ('Uneven number of arguments.\nDouble check your start and end'
+               ' points and try again')
+        sys.exit(0)
+    for s in slices:
+        if (slices.index(s) + 1) % 2 == 0:
+            even.append(s)
+        else:
+            odd.append(s)
+    cords = zip(odd,even)
+    for s,e in cords:
+        new_slices.append(abs(int(e) - int(s)))
+    return new_slices
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Convert fix-width files to'
+                                     ' tab-delimited.')
+    parser.add_argument('-c', '--columns', help='a list of columns by length'
+                        '\'12,12,24,8,2\'', type=str)
+    parser.add_argument('-s', '--startend', help='a list of columns by start'
+                        'and end positions \'1,14,15,45,46,60\'', type=str)
+    parser.add_argument('file', help='file to target', type=str)
+    parser.add_argument('out', help='output file', nargs='?', type=str)
+    args = parser.parse_args()
+
+    if args.startend:
+        startEndSlice = args.startend.split(',')
+        slices = start_end(startEndSlice)
+    elif args.columns:
+        slices = args.columns.split(',')
+    else:
+        print 'Missing arguments, try again or run -h for usage.'
+        sys.exit(0)
+
+    fw_tab(slices, args.file, args.out)
+
+
+
+if __name__ == '__main__':
+    main()
