@@ -2,27 +2,22 @@
 import argparse
 import sys
 
-
 def fw_tab(slices, reader, writer):
     '''
-    Create a list for each row in rf and join it by tab
-    in wf.
+    Create a list for each row in reader file and join it by tab delimter
+    in the writer file.
     '''
     if not writer:
         writer = 'fw_output.txt'
-    rf = open(reader, 'r')
     wf = open(writer, 'w')
-    l = []
-    for line in rf:
-        for s in slices:
-            l.append(line[:int(s) + 1])
-            line = line[int(s):]
-        newS = '\t'.join(l)
-        wf.write(newS + '\n')
+    for line in open(reader, 'r'):
         l = []
-    rf.close()
+        for s in slices:
+            l.append((line[:int(s)+ 1]).rstrip())
+            line = line[int(s)+1:]
+        wf.write('\t'.join(l) + '\n')
     wf.close()
-    print 'Output file: %s' % reader
+    print 'Output file: %s' % writer
 
 
 def start_end(slices):
@@ -30,21 +25,13 @@ def start_end(slices):
     Take a even number of start and end positions and create
     column sections to use.
     '''
-    odd = []
-    even = []
-    new_slices = []
     if len(slices) % 2 != 0:
         print ('Uneven number of arguments.\nDouble check your start and end'
                ' points and try again')
         sys.exit(0)
-    for s in slices:
-        if (slices.index(s) + 1) % 2 == 0:
-            even.append(s)
-        else:
-            odd.append(s)
-    cords = zip(odd,even)
-    for s,e in cords:
-        new_slices.append(abs(int(e) - int(s)))
+    even = [s for s in slices if (slices.index(s) + 1) % 2 == 0]
+    odd = [s for s in slices if (slices.index(s) + 1) % 2 != 0]
+    new_slices = [abs(int(e) - int(s)) for s,e in zip(odd, even)]
     return new_slices
 
 
@@ -60,8 +47,7 @@ def main():
     args = parser.parse_args()
 
     if args.startend:
-        startEndSlice = args.startend.split(',')
-        slices = start_end(startEndSlice)
+        slices = start_end(args.startend.split(','))
     elif args.columns:
         slices = args.columns.split(',')
     else:
@@ -69,7 +55,6 @@ def main():
         sys.exit(0)
 
     fw_tab(slices, args.file, args.out)
-
 
 
 if __name__ == '__main__':
