@@ -1,0 +1,163 @@
+#!/bin/bash
+#TO DO LIST:
+#allow multiple headers to be tested
+
+help="rdupe [-h][-f arg][-s arg][-o arg] file file2
+
+rdupe is a two step deduper.
+It first checks for duplicates within itself (file2). Next
+it checks to see if a entry in file1 exists in file2. If it
+does it removes that record from being written to the ouput file.
+
+-h   display this help message
+-f   field header to search for. Defaults to email
+-s   field separator
+-o   output file
+
+example usage:
+rdupe -f last_name -s\"\t\" -o outfile.txt file1.txt file2.txt "
+
+
+while getopts ":f:s:o:h" opt; do
+        case "$opt" in
+                f)
+                        header=$OPTARG;;
+                        #echo "-h was triggered, param: $OPTARG" >&2;;
+                s)
+                        separator=$OPTARG;;
+                        #echo "-s was triggered, param: $OPTARG" >&2;;
+                o)
+                        outfile=$OPTARG;;
+                        #echo "-o was triggered, param: $OPTARG" >&2;;
+                v)
+                        verbose=$OPTARG;;
+                        #echo "-v was triggered, param: $OPTARG" >&2;;
+                h)
+                        echo "$help"
+                        exit 0;;
+                \?)
+                        echo -e "invalid opt: -$OPTARG\n-h for usage" >&2
+                        exit 1;;
+                :)
+                        echo "Option -$OPTARG requires an argument." >&2
+                        exit 1;;
+        esac
+done
+
+
+#Positional file arguments
+ARG1="${@:$OPTIND:1}"
+ARG2="${@:$OPTIND+1:1}"
+if [ ! "$header" ]; then
+        header="email"
+fi
+
+if [ ! "$separator" ]; then
+        separator="\t"
+fi
+
+if [ ! "$outfile" ]; then
+        outfile="duped.txt"
+fi
+
+if [ ! -f "$ARG1" -o ! -f "$ARG2" ]; then
+        echo -e "Error: invalid or unspecifed file\n-h for usage"
+        exit 1;
+fi
+
+
+awk -v sep="$separator" -v header="$header" 'BEGIN {
+        FS="\t";
+        OFS=sep;
+        f="";
+        in_dupes=0;
+        dupes=0;
+        write=1;
+        file1_records=0;
+        file2_records=0;
+        file1_headers[""]=0;
+        file2_headers[""]=0;
+        file1_fields[""]=0;
+        file2_fields[""]=0;
+}
+
+{
+        #Create a array of headers and move to line 2 of file
+        if(f != FILENAME){
+                f=FILENAME;
+                print "Reading " f "...";
+
+                if(f == "'$ARG1'"){
+                        header_match=0;
+                        for(i=1; i <= NF; i++){
+                                file1_headers[$i]=i;
+                                if($i == header){header_match=1;}
+                        }
+                        if(!header_match){
+                                print "Header: " header " not in file " f;
+                                exit 1
+                        }
+                }
+                else if(f == "'$ARG2'" ){
+                        header_match=0;
+                        for(i=1; i <= NF; i++){
+                                file2_headers[$i]=i;
+                                if($i == header){header_match=1;}
+                        }
+                        if(!header_match){
+                                print "Header: " header " not in file " f;
+                                exit 1
+                        }
+                        $1=$1;
+                        print $0 > "'$outfile'";
+                }
+                next;
+        }
+
+
+        #Create a array of each field record by field header specified
+        if(f == "'$ARG1'"){
+                file1_fields[$file1_headers[header]]=$file1_headers[header];
+                file1_records++;
+        }
+        else if(f == "'$ARG2'"){
+                if($file2_headers[header] in file2_fields){
+                        write=0;
+                        in_dupes++;
+                }
+                else{
+                        file2_fields[$file2_headers[header]]=$file2_headers[header];
+
+                        for(file1 in file1_fields){
+                                if(file2_fields[$file2_headers[header]] == file1){
+                                        dupes++;
+                                        write=0;
+                                }
+                        }
+                }
+                if(write){
+                        $1=$1;
+                        print $0 > "'$outfile'";
+                }
+                else{
+                        write=1;
+                }
+                file2_records++;
+        }
+}
+
+END {
+        if(header_match){
+                print "Writing to --> " "'$outfile'";
+                print "";
+                print "Results"
+                print "---------------"
+                print "'$ARG1'" " lines: " file1_records;
+                if("'$ARG2'"){
+                        print "'$ARG2'" " lines: " file2_records;
+                }
+                print "Internal Dupes: " in_dupes;
+                print "Cross File Dupes: " dupes;
+                print "Total Dupes: " in_dupes + dupes;
+        }
+}' "$ARG1" "$ARG2"
